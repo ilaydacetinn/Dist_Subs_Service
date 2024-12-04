@@ -1,42 +1,52 @@
-# Configuration sınıfı tanımı
-class Configuration
-  attr_accessor :fault_tolerance_level, :method
+require 'socket'
 
-  def initialize(fault_tolerance_level, method)
-    @fault_tolerance_level = fault_tolerance_level
-    @method = method
-  end
-end
+# Sunucuların listesi
+servers = [
+  { name: "Server1", host: "localhost", port: 5001 },
+  { name: "Server2", host: "localhost", port: 5002 },
+  { name: "Server3", host: "localhost", port: 5003 }
+]
 
-# dist_subs.conf dosyasını okuma
-config_file_path = File.join(Dir.pwd, "dist_subs.conf")
-unless File.exist?(config_file_path)
-  puts "dist_subs.conf dosyası bulunamadı!"
-  exit
-end
+responding_servers = []
 
-fault_tolerance_level = nil
-File.foreach(config_file_path) do |line|
-  if line.strip =~ /^fault_tolerance_level\s*=\s*(\d+)$/
-    fault_tolerance_level = $1.to_i
-  end
-end
-
-if fault_tolerance_level.nil?
-  puts "dist_subs.conf dosyasından hata tolerans seviyesi okunamadı!"
-  exit
-end
-
-# Configuration nesnesi oluşturma
-config = Configuration.new(fault_tolerance_level, "STRT")
-
-# Sunuculara komut gönderme
-servers = ["Server1.java", "Server2.java", "Server3.java"]
-
+# Başlangıç komutu gönder
 servers.each do |server|
-  puts "Sunucuya komut gönderiliyor: #{server} - #{config.method}"
-  # Burada ilgili komutları sunuculara gönderme işlemleri yapılabilir.
+  begin
+    socket = TCPSocket.new(server[:host], server[:port])
+    message = "fault_tolerance_level=1 method=STRT"
+    socket.puts(message)
+
+    response = socket.gets
+    if response && response.include?("response=YEP")
+      responding_servers << server
+      puts "#{server[:name]} yanıt verdi: #{response.strip}"
+    end
+
+    socket.close
+  rescue => e
+    puts "#{server[:name]} bağlantı hatası: #{e.message}"
+  end
 end
 
-puts "Tüm sunucular başlatıldı."
+# Kapasite sorguları
+loop do
+  responding_servers.each do |server|
+    begin
+      socket = TCPSocket.new(server[:host], server[:port])
 
+      # Kapasite sorgusu gönder
+      socket.puts("demand=CPCTY response=null")
+      response = socket.gets
+
+      if response
+        puts "#{server[:name]} yanıt verdi: #{response.strip}"
+      end
+
+      socket.close
+    rescue => e
+      puts "#{server[:name]} kapasite sorgusunda hata: #{e.message}"
+    end
+  end
+
+  sleep 5
+end
