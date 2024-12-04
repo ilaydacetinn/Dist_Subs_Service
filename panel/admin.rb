@@ -1,3 +1,5 @@
+require 'socket'
+
 # Configuration sınıfı tanımı
 class Configuration
   attr_accessor :fault_tolerance_level, :method
@@ -31,12 +33,30 @@ end
 config = Configuration.new(fault_tolerance_level, "STRT")
 
 # Sunuculara komut gönderme
-servers = ["Server1.java", "Server2.java", "Server3.java"]
+servers = [
+  { name: "Server1", host: "localhost", port: 5001 },
+  { name: "Server2", host: "localhost", port: 5002 },
+  { name: "Server3", host: "localhost", port: 5003 }
+]
 
 servers.each do |server|
-  puts "Sunucuya komut gönderiliyor: #{server} - #{config.method}"
-  # Burada ilgili komutları sunuculara gönderme işlemleri yapılabilir.
+  begin
+    # Sunucuya bağlan
+    socket = TCPSocket.new(server[:host], server[:port])
+
+    # Komut gönder
+    message = "fault_tolerance_level=#{config.fault_tolerance_level} method=#{config.method}"
+    socket.puts(message)
+    puts "#{server[:name]} sunucusuna komut gönderildi: #{message}"
+
+    # Yanıt al
+    response = socket.gets
+    puts "#{server[:name]} yanıt verdi: #{response.strip}" unless response.nil?
+
+    socket.close
+  rescue => e
+    puts "#{server[:name]} bağlantı hatası: #{e.message}"
+  end
 end
 
-puts "Tüm sunucular başlatıldı."
-
+puts "Tüm sunuculara komut gönderimi tamamlandı."
