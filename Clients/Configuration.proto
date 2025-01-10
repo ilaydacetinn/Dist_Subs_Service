@@ -1,0 +1,6 @@
+syntax = "proto3";
+
+message Configuration {
+  int32 fault_tolerance_level = 1;  // Hata toleransı seviyesi
+  string method = 2;                // Komut türü (STRT, STOP)
+}

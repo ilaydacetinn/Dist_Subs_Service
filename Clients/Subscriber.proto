@@ -1,0 +1,6 @@
+syntax = "proto3";
+
+message Subscriber {
+  string client_id = 1;     // İstemcinin ID'si
+  string subscription = 2;  // Abonelik türü
+}
